@@ -46,7 +46,7 @@ func (this *multicastApiRegistry) RegisterApi(name string, version string) error
 	if version == "" {
 		return errors.New("version was empty and version is a required parameter")
 	}
-
+	log.Println("Registering", name, version)
 	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP(MulticastGroupIP), Port: MulticastGroupPort})
 
 	if err != nil {
@@ -99,7 +99,9 @@ func (this *multicastApiRegistry) GetApisByApiName(name string) []Api {
 func (this *multicastApiRegistry) listenMutlicast() {
 	readBuff := make([]byte, RegistrationMessageSizeBytes)
 	for {
+		log.Println("Preparing to read multicast")
 		nRead, rAddr, err := this.mConn.ReadFromUDP(readBuff)
+		log.Println("Read from multicast")
 		if err != nil {
 			log.Println("Error during multicast read", err)
 		} else {
