@@ -55,14 +55,14 @@ func (this *multicastApiRegistry) RegisterApi(name string, version string) error
 
 	message := &apiRegisterMessageJSON{ApiName: name, ApiVersion: version}
 
-	dataOut := bytes.NewBuffer(make([]byte, RegistrationMessageSizeBytes))
+	dataOut := bytes.NewBuffer(make([]byte, 0, RegistrationMessageSizeBytes))
 
 	err = json.NewEncoder(dataOut).Encode(message)
 
 	if err != nil {
 		return err
 	}
-
+	log.Println("length of packet to be sent", dataOut.Len())
 	if dataOut.Len() > RegistrationMessageSizeBytes {
 		return errors.New(fmt.Sprint("Message size for", name, version, "exceeds max length of", RegistrationMessageSizeBytes, "bytes"))
 	}
