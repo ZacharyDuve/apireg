@@ -12,21 +12,27 @@ import (
 )
 
 const (
-	MulticastGroupIP             string = "224.0.0.78"
-	MulticastGroupPort           int    = 5324
-	RegistrationMessageSizeBytes int    = 1400
+	MulticastGroupIP             string        = "224.0.0.78"
+	MulticastGroupPort           int           = 5324
+	RegistrationMessageSizeBytes int           = 1400
+	RegistrationLifeSpan         time.Duration = time.Minute * 5
+	RegistrationUpdateInterval   time.Duration = time.Minute * 2
 )
 
 type multicastApiRegistry struct {
-	mConn      *net.UDPConn
-	mapRWMutex *sync.RWMutex
-	apiRegs    map[string][]*apiRegistration
+	mConn            *net.UDPConn
+	apisRWMutex      *sync.RWMutex
+	apiRegs          map[string][]*apiRegistration
+	ownedRegs        map[string]*ownedApi
+	ownedRegsRWMutex *sync.RWMutex
 }
 
 func NewRegistry() (ApiRegistry, error) {
 	r := &multicastApiRegistry{}
-	r.mapRWMutex = &sync.RWMutex{}
+	r.apisRWMutex = &sync.RWMutex{}
+	r.ownedRegsRWMutex = &sync.RWMutex{}
 	r.apiRegs = make(map[string][]*apiRegistration)
+	r.ownedRegs = make(map[string]*ownedApi)
 
 	mC, err := net.ListenMulticastUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP(MulticastGroupIP), Port: MulticastGroupPort})
 
@@ -36,7 +42,17 @@ func NewRegistry() (ApiRegistry, error) {
 	r.mConn = mC
 
 	go r.listenMutlicast()
+	go r.cleanupExpiredRegLoop()
+	go r.resendOwnedRegistrationsLoop()
 	return r, nil
+}
+
+func (this *multicastApiRegistry) ownsApi(name string) bool {
+	this.ownedRegsRWMutex.RLock()
+	_, contains := this.ownedRegs[name]
+	this.ownedRegsRWMutex.RUnlock()
+
+	return contains
 }
 
 func (this *multicastApiRegistry) RegisterApi(name string, version string) error {
@@ -46,14 +62,32 @@ func (this *multicastApiRegistry) RegisterApi(name string, version string) error
 	if version == "" {
 		return errors.New("version was empty and version is a required parameter")
 	}
+	contains := this.ownsApi(name)
+	if contains {
+		log.Println("Already contains", name, "nothing to do")
+		return nil
+	}
+
 	log.Println("Registering", name, version)
+
+	err := sendApiRegistration(name, version)
+
+	if err != nil {
+		this.ownedRegsRWMutex.Lock()
+		this.ownedRegs[name] = &ownedApi{name: name, version: version}
+		this.ownedRegsRWMutex.Unlock()
+	}
+	return err
+}
+
+func sendApiRegistration(name, version string) error {
 	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP(MulticastGroupIP), Port: MulticastGroupPort})
 
 	if err != nil {
 		return err
 	}
 
-	message := &apiRegisterMessageJSON{ApiName: name, ApiVersion: version}
+	message := &apiRegisterMessageJSON{ApiName: name, ApiVersion: version, LifeSpan: RegistrationLifeSpan}
 
 	dataOut := bytes.NewBuffer(make([]byte, 0, RegistrationMessageSizeBytes))
 
@@ -62,38 +96,105 @@ func (this *multicastApiRegistry) RegisterApi(name string, version string) error
 	if err != nil {
 		return err
 	}
-	log.Println("length of packet to be sent", dataOut.Len())
+
 	if dataOut.Len() > RegistrationMessageSizeBytes {
 		return errors.New(fmt.Sprint("Message size for", name, version, "exceeds max length of", RegistrationMessageSizeBytes, "bytes"))
 	}
 
 	_, err = conn.Write(dataOut.Bytes())
+
 	return err
 }
 
+func computeOwnedRegKey(name, version string) string {
+	return fmt.Sprint(name, ":", version)
+}
+
+func (this *multicastApiRegistry) resendOwnedRegistrationsLoop() {
+	updateTicker := time.NewTicker(RegistrationUpdateInterval)
+	for {
+		select {
+		case <-updateTicker.C:
+			this.processRegResends()
+		}
+	}
+}
+
+func (this *multicastApiRegistry) processRegResends() {
+	this.ownedRegsRWMutex.RLock()
+	for _, curOwnedApi := range this.ownedRegs {
+		sendApiRegistration(curOwnedApi.name, curOwnedApi.version)
+	}
+	this.apisRWMutex.RUnlock()
+}
+
 func (this *multicastApiRegistry) GetAvailableApis() []Api {
-	this.mapRWMutex.RLock()
+	this.apisRWMutex.RLock()
 	allApis := make([]Api, 0)
 
 	for curApiName := range this.apiRegs {
 		allApis = append(allApis, this.GetApisByApiName(curApiName)...)
 	}
 
-	this.mapRWMutex.RUnlock()
+	this.apisRWMutex.RUnlock()
 
 	return allApis
 }
 
 func (this *multicastApiRegistry) GetApisByApiName(name string) []Api {
-	this.mapRWMutex.RLock()
+	this.apisRWMutex.RLock()
 	regs := this.apiRegs[name]
-	apis := make([]Api, len(regs))
-	for i, curReg := range regs {
-		apis[i] = curReg.api
+	apis := make([]Api, 0)
+	now := time.Now()
+	for _, curReg := range regs {
+		if curReg.timeRegistered.Add(curReg.lifeSpan).After(now) {
+			apis = append(apis, curReg.api)
+		}
 	}
-	this.mapRWMutex.RUnlock()
+	this.apisRWMutex.RUnlock()
 
 	return apis
+}
+
+func (this *multicastApiRegistry) cleanupExpiredRegLoop() {
+	cleanupTicker := time.NewTicker(RegistrationLifeSpan)
+	this.apisRWMutex.Lock()
+	for range cleanupTicker.C {
+		expiredApiRegs := this.findExpiredApiRegs()
+		if len(expiredApiRegs) > 0 {
+			for _, curExpiredReg := range expiredApiRegs {
+				origRegsForName := this.apiRegs[curExpiredReg.api.Name()]
+				newRegsForName := make([]*apiRegistration, 0)
+				for _, curRegsForName := range origRegsForName {
+					if curRegsForName.timeRegistered.Add(curRegsForName.lifeSpan).After(time.Now()) {
+						newRegsForName = append(newRegsForName, curRegsForName)
+					}
+				}
+				if len(newRegsForName) > 0 {
+					this.apiRegs[curExpiredReg.api.Name()] = newRegsForName
+				} else {
+					delete(this.apiRegs, curExpiredReg.api.Name())
+				}
+			}
+		}
+	}
+	this.apisRWMutex.Unlock()
+}
+
+func (this *multicastApiRegistry) findExpiredApiRegs() []*apiRegistration {
+	now := time.Now()
+	this.apisRWMutex.RLock()
+	expiredApiRegs := make([]*apiRegistration, 0)
+	for _, regs := range this.apiRegs {
+		for _, curReg := range regs {
+			if curReg.timeRegistered.Add(curReg.lifeSpan).Before(now) {
+				expiredApiRegs = append(expiredApiRegs, curReg)
+			}
+		}
+	}
+	this.apisRWMutex.RUnlock()
+
+	return expiredApiRegs
 }
 
 func (this *multicastApiRegistry) listenMutlicast() {
@@ -111,18 +212,17 @@ func (this *multicastApiRegistry) listenMutlicast() {
 				log.Println("Error decoding multicast json", err)
 			} else {
 				api := &apiImpl{name: message.ApiName, version: message.ApiVersion, remoteIP: rAddr.IP, remotePort: rAddr.Port}
-				log.Println("Registered", api)
-				this.updateApis(api)
+				this.updateApis(api, message.LifeSpan)
 			}
 		}
 	}
 }
 
-func (this *multicastApiRegistry) updateApis(api Api) {
-	this.mapRWMutex.Lock()
+func (this *multicastApiRegistry) updateApis(api Api, lifespan time.Duration) {
+	this.apisRWMutex.Lock()
 	apisForName, contains := this.apiRegs[api.Name()]
 	if !contains {
-		apisForName = []*apiRegistration{{api: api, timeRegistered: time.Now()}}
+		apisForName = []*apiRegistration{{api: api, timeRegistered: time.Now(), lifeSpan: lifespan}}
 		this.apiRegs[api.Name()] = apisForName
 	} else {
 		matchReg := getRegMatch(api, apisForName)
@@ -130,10 +230,10 @@ func (this *multicastApiRegistry) updateApis(api Api) {
 		if matchReg != nil {
 			matchReg.timeRegistered = time.Now()
 		} else {
-			matchReg = &apiRegistration{api: api, timeRegistered: time.Now()}
+			matchReg = &apiRegistration{api: api, timeRegistered: time.Now(), lifeSpan: lifespan}
 		}
 	}
-	this.mapRWMutex.Unlock()
+	this.apisRWMutex.Unlock()
 }
 
 func getRegMatch(api Api, apis []*apiRegistration) *apiRegistration {
