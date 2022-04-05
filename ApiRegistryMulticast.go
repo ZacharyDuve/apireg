@@ -257,8 +257,7 @@ func getRegMatch(api Api, apis []*apiRegistration) *apiRegistration {
 	for _, curReg := range apis {
 		if api.Name() == curReg.api.Name() &&
 			api.Version() == curReg.api.Version() &&
-			api.HostIP().String() == curReg.api.HostIP().String() &&
-			api.HostPort() == curReg.api.HostPort() {
+			api.HostIP().String() == curReg.api.HostIP().String() {
 			return curReg
 		}
 	}
