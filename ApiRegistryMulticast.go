@@ -15,8 +15,8 @@ const (
 	MulticastGroupIP             string        = "224.0.0.78"
 	MulticastGroupPort           int           = 5324
 	RegistrationMessageSizeBytes int           = 1400
-	RegistrationLifeSpan         time.Duration = time.Minute * 5
-	RegistrationUpdateInterval   time.Duration = time.Minute * 2
+	RegistrationLifeSpan         time.Duration = time.Second * 90
+	RegistrationUpdateInterval   time.Duration = time.Second * 30
 )
 
 type multicastApiRegistry struct {
@@ -81,6 +81,7 @@ func (this *multicastApiRegistry) RegisterApi(name string, version string) error
 }
 
 func sendApiRegistration(name, version string) error {
+	log.Println("Sending Api Registration for", name, version)
 	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP(MulticastGroupIP), Port: MulticastGroupPort})
 
 	if err != nil {
@@ -112,16 +113,15 @@ func computeOwnedRegKey(name, version string) string {
 
 func (this *multicastApiRegistry) resendOwnedRegistrationsLoop() {
 	updateTicker := time.NewTicker(RegistrationUpdateInterval)
-	for {
-		select {
-		case <-updateTicker.C:
-			this.processRegResends()
-		}
+	for range updateTicker.C {
+		this.processRegResends()
 	}
 }
 
 func (this *multicastApiRegistry) processRegResends() {
+	log.Println("Starting to process Registration Resends")
 	this.ownedRegsRWMutex.RLock()
+	log.Println("Number of cur owned APIs:", len(this.ownedRegs))
 	for _, curOwnedApi := range this.ownedRegs {
 		sendApiRegistration(curOwnedApi.name, curOwnedApi.version)
 	}
