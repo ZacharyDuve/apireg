@@ -155,22 +155,30 @@ func (this *multicastApiRegistry) GetApisByApiName(name string) []Api {
 }
 
 func (this *multicastApiRegistry) cleanupExpiredRegLoop() {
+	log.Println("Starting cleanupExpiredRegLoop")
 	cleanupTicker := time.NewTicker(RegistrationLifeSpan)
 	for range cleanupTicker.C {
+		log.Println("Starting a cleanup cycle")
 		expiredApiRegs := this.findExpiredApiRegs()
 		if len(expiredApiRegs) > 0 {
+			log.Println("Found some apis to expire")
 			this.apisRWMutex.Lock()
 			for _, curExpiredReg := range expiredApiRegs {
+				log.Println("curExpiredReg", curExpiredReg)
 				origRegsForName := this.apiRegs[curExpiredReg.api.Name()]
 				newRegsForName := make([]*apiRegistration, 0)
 				for _, curRegsForName := range origRegsForName {
+					log.Println("Seeing if the current reg is still valid", curRegsForName.timeRegistered.Add(curRegsForName.lifeSpan).After(time.Now()))
 					if curRegsForName.timeRegistered.Add(curRegsForName.lifeSpan).After(time.Now()) {
 						newRegsForName = append(newRegsForName, curRegsForName)
 					}
 				}
+
 				if len(newRegsForName) > 0 {
+					log.Println("We had", len(newRegsForName), "apis so keeping")
 					this.apiRegs[curExpiredReg.api.Name()] = newRegsForName
 				} else {
+					log.Println("Deleting since no regs")
 					delete(this.apiRegs, curExpiredReg.api.Name())
 				}
 			}
@@ -180,18 +188,21 @@ func (this *multicastApiRegistry) cleanupExpiredRegLoop() {
 }
 
 func (this *multicastApiRegistry) findExpiredApiRegs() []*apiRegistration {
+	log.Println("Starting findExpiredApiRegs")
 	now := time.Now()
+	log.Println("Time for looking up expired", now)
 	this.apisRWMutex.RLock()
 	expiredApiRegs := make([]*apiRegistration, 0)
 	for _, regs := range this.apiRegs {
 		for _, curReg := range regs {
+			log.Println("Comparing curReg to now", curReg.timeRegistered, curReg.timeRegistered.Add(curReg.lifeSpan).Before(now))
 			if curReg.timeRegistered.Add(curReg.lifeSpan).Before(now) {
 				expiredApiRegs = append(expiredApiRegs, curReg)
 			}
 		}
 	}
 	this.apisRWMutex.RUnlock()
-
+	log.Println("Found", len(expiredApiRegs), "apis to retire")
 	return expiredApiRegs
 }
 
@@ -199,6 +210,7 @@ func (this *multicastApiRegistry) listenMutlicast() {
 	readBuff := make([]byte, RegistrationMessageSizeBytes)
 	for {
 		nRead, rAddr, err := this.mConn.ReadFromUDP(readBuff)
+		log.Println("Read in a packet", nRead, rAddr.IP, rAddr.Port, err)
 		if err != nil {
 			log.Println("Error during multicast read", err)
 		} else {
@@ -207,7 +219,9 @@ func (this *multicastApiRegistry) listenMutlicast() {
 			if err != nil {
 				log.Println("Error decoding multicast json", err)
 			} else {
+				log.Println("Decoded message", message)
 				api := &apiImpl{name: message.ApiName, version: message.ApiVersion, remoteIP: rAddr.IP, remotePort: rAddr.Port}
+				log.Println("api post mapping", api)
 				this.updateApis(api, message.LifeSpan)
 			}
 		}
@@ -215,18 +229,25 @@ func (this *multicastApiRegistry) listenMutlicast() {
 }
 
 func (this *multicastApiRegistry) updateApis(api Api, lifespan time.Duration) {
+	log.Println("starting updateApis")
 	this.apisRWMutex.Lock()
 	apisForName, contains := this.apiRegs[api.Name()]
+	log.Println("Did we have already a registry for this", contains)
 	if !contains {
+		log.Println("Inserting a new record for", api.Name())
 		apisForName = []*apiRegistration{{api: api, timeRegistered: time.Now(), lifeSpan: lifespan}}
 		this.apiRegs[api.Name()] = apisForName
 	} else {
 		matchReg := getRegMatch(api, apisForName)
-
+		log.Println("Found registration for", api.Name(), "found", matchReg.api)
 		if matchReg != nil {
+			log.Println("Updating time registered to now")
 			matchReg.timeRegistered = time.Now()
 		} else {
-			matchReg = &apiRegistration{api: api, timeRegistered: time.Now(), lifeSpan: lifespan}
+			newRecord := &apiRegistration{api: api, timeRegistered: time.Now(), lifeSpan: lifespan}
+			log.Println("inserting a new registration", newRecord)
+			apisForName = append(apisForName, newRecord)
+			this.apiRegs[api.Name()] = apisForName
 		}
 	}
 	this.apisRWMutex.Unlock()
