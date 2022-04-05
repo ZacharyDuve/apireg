@@ -239,7 +239,7 @@ func (this *multicastApiRegistry) updateApis(api Api, lifespan time.Duration) {
 		this.apiRegs[api.Name()] = apisForName
 	} else {
 		matchReg := getRegMatch(api, apisForName)
-		log.Println("Found registration for", api.Name(), "found", matchReg.api)
+		log.Println("Found registration for", api.Name(), "found", matchReg)
 		if matchReg != nil {
 			log.Println("Updating time registered to now")
 			matchReg.timeRegistered = time.Now()
