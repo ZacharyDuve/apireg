@@ -55,7 +55,7 @@ func (this *multicastApiRegistry) ownsApi(name string) bool {
 	return contains
 }
 
-func (this *multicastApiRegistry) RegisterApi(name string, version string) error {
+func (this *multicastApiRegistry) RegisterApi(name string, version string, port int) error {
 	if name == "" {
 		return errors.New("name was empty and name is a required parameter")
 	}
@@ -70,17 +70,17 @@ func (this *multicastApiRegistry) RegisterApi(name string, version string) error
 
 	log.Println("Registering", name, version)
 
-	err := sendApiRegistration(name, version)
+	err := sendApiRegistration(name, version, port)
 
 	if err == nil {
 		this.ownedRegsRWMutex.Lock()
-		this.ownedRegs[name] = &ownedApi{name: name, version: version}
+		this.ownedRegs[name] = &ownedApi{name: name, version: version, port: port}
 		this.ownedRegsRWMutex.Unlock()
 	}
 	return err
 }
 
-func sendApiRegistration(name, version string) error {
+func sendApiRegistration(name, version string, port int) error {
 	log.Println("Sending Api Registration for", name, version)
 	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP(MulticastGroupIP), Port: MulticastGroupPort})
 
@@ -88,7 +88,7 @@ func sendApiRegistration(name, version string) error {
 		return err
 	}
 
-	message := &apiRegisterMessageJSON{ApiName: name, ApiVersion: version, LifeSpan: RegistrationLifeSpan}
+	message := &apiRegisterMessageJSON{ApiName: name, ApiVersion: version, ApiPort: port, LifeSpan: RegistrationLifeSpan}
 
 	dataOut := bytes.NewBuffer(make([]byte, 0, RegistrationMessageSizeBytes))
 
@@ -123,7 +123,7 @@ func (this *multicastApiRegistry) processRegResends() {
 	this.ownedRegsRWMutex.RLock()
 	log.Println("Number of cur owned APIs:", len(this.ownedRegs))
 	for _, curOwnedApi := range this.ownedRegs {
-		sendApiRegistration(curOwnedApi.name, curOwnedApi.version)
+		sendApiRegistration(curOwnedApi.name, curOwnedApi.version, curOwnedApi.port)
 	}
 	this.ownedRegsRWMutex.RUnlock()
 }
@@ -220,7 +220,7 @@ func (this *multicastApiRegistry) listenMutlicast() {
 				log.Println("Error decoding multicast json", err)
 			} else {
 				log.Println("Decoded message", message)
-				api := &apiImpl{name: message.ApiName, version: message.ApiVersion, remoteIP: rAddr.IP, remotePort: rAddr.Port}
+				api := &apiImpl{name: message.ApiName, version: message.ApiVersion, remoteIP: rAddr.IP, remotePort: message.ApiPort}
 				log.Println("api post mapping", api)
 				this.updateApis(api, message.LifeSpan)
 			}
@@ -257,7 +257,8 @@ func getRegMatch(api Api, apis []*apiRegistration) *apiRegistration {
 	for _, curReg := range apis {
 		if api.Name() == curReg.api.Name() &&
 			api.Version() == curReg.api.Version() &&
-			api.HostIP().String() == curReg.api.HostIP().String() {
+			api.HostIP().String() == curReg.api.HostIP().String() &&
+			api.HostPort() == curReg.api.HostPort() {
 			return curReg
 		}
 	}

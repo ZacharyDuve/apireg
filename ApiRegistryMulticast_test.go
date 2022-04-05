@@ -12,9 +12,9 @@ func TestMainForMulticastRegistry(t *testing.T) {
 
 	failOnErr(err, t)
 
-	err = r.RegisterApi("Something something", "v1.0.0")
+	err = r.RegisterApi("Something something", "v1.0.0", 80)
 	failOnErr(err, t)
-	err = r.RegisterApi("Somethingelse", "V0.1.3")
+	err = r.RegisterApi("Somethingelse", "V0.1.3", 433)
 	failOnErr(err, t)
 
 	time.Sleep(time.Second * 1)
@@ -40,8 +40,8 @@ func TestThatTwoRegistriesRegisterEachOther(t *testing.T) {
 	reg1ApiName := "Other"
 	reg1ApiVersion := "V199138831231"
 
-	reg0.RegisterApi(reg0ApiName, reg0ApiVersion)
-	reg1.RegisterApi(reg1ApiName, reg1ApiVersion)
+	reg0.RegisterApi(reg0ApiName, reg0ApiVersion, 8080)
+	reg1.RegisterApi(reg1ApiName, reg1ApiVersion, 8080)
 
 	time.Sleep(time.Second * 2)
 	t.Log("reg0.GetApisByApiName(reg1ApiName)", reg0.GetApisByApiName(reg1ApiName)[0].Name())
