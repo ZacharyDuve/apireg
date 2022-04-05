@@ -72,7 +72,7 @@ func (this *multicastApiRegistry) RegisterApi(name string, version string) error
 
 	err := sendApiRegistration(name, version)
 
-	if err != nil {
+	if err == nil {
 		this.ownedRegsRWMutex.Lock()
 		this.ownedRegs[name] = &ownedApi{name: name, version: version}
 		this.ownedRegsRWMutex.Unlock()
