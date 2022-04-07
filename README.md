@@ -1,4 +1,4 @@
-# go-distributed-api-registry
+# apireg
 Distributed Api Registry written in go. Currently fully functional though still in BETA
 
 # Function:

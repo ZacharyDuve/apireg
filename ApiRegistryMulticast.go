@@ -1,4 +1,4 @@
-package godistributedapiregistry
+package apireg
 
 import (
 	"bytes"

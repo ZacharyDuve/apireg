@@ -1,4 +1,4 @@
-package godistributedapiregistry
+package apireg
 
 type ApiRegistry interface {
 	RegisterApi(name string, version Version, port int) error

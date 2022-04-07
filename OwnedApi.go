@@ -1,4 +1,4 @@
-package godistributedapiregistry
+package apireg
 
 type ownedApi struct {
 	name    string
