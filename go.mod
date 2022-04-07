@@ -1,3 +1,3 @@
-module github.com/ZacharyDuve/go-distributed-api-registry
+module github.com/ZacharyDuve/apireg
 
 go 1.16
