@@ -55,12 +55,9 @@ func (this *multicastApiRegistry) ownsApi(name string) bool {
 	return contains
 }
 
-func (this *multicastApiRegistry) RegisterApi(name string, version string, port int) error {
+func (this *multicastApiRegistry) RegisterApi(name string, version Version, port int) error {
 	if name == "" {
 		return errors.New("name was empty and name is a required parameter")
-	}
-	if version == "" {
-		return errors.New("version was empty and version is a required parameter")
 	}
 	contains := this.ownsApi(name)
 	if contains {
@@ -80,7 +77,7 @@ func (this *multicastApiRegistry) RegisterApi(name string, version string, port 
 	return err
 }
 
-func sendApiRegistration(name, version string, port int) error {
+func sendApiRegistration(name string, version Version, port int) error {
 	//log.Println("Sending Api Registration for", name, version)
 	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP(MulticastGroupIP), Port: MulticastGroupPort})
 

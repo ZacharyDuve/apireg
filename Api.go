@@ -4,14 +4,14 @@ import "net"
 
 type Api interface {
 	Name() string
-	Version() string
+	Version() Version
 	HostIP() net.IP
 	HostPort() int
 }
 
 type apiImpl struct {
 	name       string
-	version    string
+	version    Version
 	remoteIP   net.IP
 	remotePort int
 }
@@ -19,7 +19,7 @@ type apiImpl struct {
 func (this *apiImpl) Name() string {
 	return this.name
 }
-func (this *apiImpl) Version() string {
+func (this *apiImpl) Version() Version {
 	return this.version
 }
 func (this *apiImpl) HostIP() net.IP {

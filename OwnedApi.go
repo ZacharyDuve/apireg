@@ -2,6 +2,6 @@ package godistributedapiregistry
 
 type ownedApi struct {
 	name    string
-	version string
+	version Version
 	port    int
 }
