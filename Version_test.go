@@ -73,3 +73,11 @@ func TestVersionGreaterThanReturnsTrueWhenVersion0IsHigherThanVersion1(t *testin
 		t.Fail()
 	}
 }
+
+func TestThatVersionStringReturnsCorrect(t *testing.T) {
+	v := Version{Major: 12, Minor: 4, BugFix: 0}
+
+	if v.String() != "v12.4.0" {
+		t.Fail()
+	}
+}

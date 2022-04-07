@@ -1,5 +1,7 @@
 package godistributedapiregistry
 
+import "fmt"
+
 type Version struct {
 	Major  uint
 	Minor  uint
@@ -16,4 +18,8 @@ func (this *Version) LessThan(other Version) bool {
 
 func (this *Version) GreaterThan(other Version) bool {
 	return this.Major >= other.Major && this.Minor >= other.Minor && this.BugFix > other.BugFix
+}
+
+func (this *Version) String() string {
+	return fmt.Sprintf("v%d.%d.%d", this.Major, this.Minor, this.BugFix)
 }
