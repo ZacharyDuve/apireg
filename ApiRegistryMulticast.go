@@ -15,8 +15,8 @@ const (
 	MulticastGroupIP             string        = "224.0.0.78"
 	MulticastGroupPort           int           = 5324
 	RegistrationMessageSizeBytes int           = 1400
-	RegistrationLifeSpan         time.Duration = time.Second * 90
-	RegistrationUpdateInterval   time.Duration = time.Second * 30
+	RegistrationLifeSpan         time.Duration = RegistrationUpdateInterval * 4
+	RegistrationUpdateInterval   time.Duration = time.Second * 15
 )
 
 type multicastApiRegistry struct {
