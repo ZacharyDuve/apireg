@@ -2,6 +2,6 @@ package apireg
 
 type ownedApi struct {
 	name    string
-	version Version
+	version *Version
 	port    int
 }

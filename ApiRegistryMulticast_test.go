@@ -12,9 +12,9 @@ func TestMainForMulticastRegistry(t *testing.T) {
 
 	failOnErr(err, t)
 
-	err = r.RegisterApi("Something something", Version{Major: 0, Minor: 1, BugFix: 3}, 80)
+	err = r.RegisterApi("Something something", &Version{Major: 0, Minor: 1, BugFix: 3}, 80)
 	failOnErr(err, t)
-	err = r.RegisterApi("Somethingelse", Version{Major: 0, Minor: 1, BugFix: 3}, 433)
+	err = r.RegisterApi("Somethingelse", &Version{Major: 0, Minor: 1, BugFix: 3}, 433)
 	failOnErr(err, t)
 
 	time.Sleep(time.Second * 1)
@@ -35,10 +35,10 @@ func TestThatTwoRegistriesRegisterEachOther(t *testing.T) {
 	reg1, err := NewRegistry()
 	failOnErr(err, t)
 	reg0ApiName := "Something"
-	reg0ApiVersion := Version{Major: 0, Minor: 1, BugFix: 3}
+	reg0ApiVersion := &Version{Major: 0, Minor: 1, BugFix: 3}
 
 	reg1ApiName := "Other"
-	reg1ApiVersion := Version{Major: 0, Minor: 1, BugFix: 3}
+	reg1ApiVersion := &Version{Major: 0, Minor: 1, BugFix: 3}
 
 	reg0.RegisterApi(reg0ApiName, reg0ApiVersion, 8080)
 	reg1.RegisterApi(reg1ApiName, reg1ApiVersion, 8080)
