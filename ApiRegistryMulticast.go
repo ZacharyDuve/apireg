@@ -11,6 +11,7 @@ import (
 
 	"github.com/ZacharyDuve/apireg/api"
 	"github.com/ZacharyDuve/apireg/store"
+	"github.com/google/uuid"
 )
 
 const (
@@ -33,6 +34,7 @@ type multicastApiRegistry struct {
 	apiRegs            store.ApiRegistrationStore
 	ownedApis          store.ApiStore
 	purgeExpiredTicker *time.Ticker
+	id                 string
 }
 
 func NewRegistry() (ApiRegistry, error) {
@@ -40,6 +42,7 @@ func NewRegistry() (ApiRegistry, error) {
 	r := &multicastApiRegistry{}
 	r.purgeExpiredTicker = time.NewTicker(registrationPurgeInterval)
 	r.apiRegs = store.NewSyncApiRegistrationStore(r.purgeExpiredTicker.C)
+	r.id = uuid.New().String()
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +74,7 @@ func (this *multicastApiRegistry) RegisterApi(name string, version *api.Version,
 		return nil
 	}
 
-	err = sendApiRegistration(localApi)
+	err = this.sendApiRegistration(localApi)
 
 	if err == nil {
 		this.ownedApis.Add(localApi)
@@ -79,14 +82,14 @@ func (this *multicastApiRegistry) RegisterApi(name string, version *api.Version,
 	return err
 }
 
-func sendApiRegistration(a api.Api) error {
+func (this *multicastApiRegistry) sendApiRegistration(a api.Api) error {
 	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP(multicastGroupIP), Port: multicastGroupPort})
 
 	if err != nil {
 		return err
 	}
 
-	message := &apiRegisterMessageJSON{ApiName: a.Name(), ApiVersion: a.Version(), ApiPort: a.HostPort()}
+	message := &apiRegisterMessageJSON{ApiName: a.Name(), ApiVersion: a.Version(), ApiPort: a.HostPort(), SenderId: this.id}
 
 	dataOut := bytes.NewBuffer(make([]byte, 0, registrationMessageSizeBytes))
 
@@ -114,7 +117,7 @@ func (this *multicastApiRegistry) resendOwnedRegistrationsLoop() {
 
 func (this *multicastApiRegistry) processRegResends() {
 	for _, curOwnedApi := range this.ownedApis.All() {
-		sendApiRegistration(curOwnedApi)
+		this.sendApiRegistration(curOwnedApi)
 	}
 }
 
@@ -150,6 +153,10 @@ func (this *multicastApiRegistry) listenMutlicast() {
 			if err != nil {
 				log.Println("Error decoding multicast json", err)
 			} else {
+				//If we got a message from ourselves then ignore it
+				if message.SenderId == this.id {
+					continue
+				}
 				var a api.Api
 				a, err = api.NewApi(message.ApiName, message.ApiVersion, rAddr.IP, message.ApiPort)
 				if err != nil {
