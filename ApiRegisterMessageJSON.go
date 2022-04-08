@@ -1,10 +1,11 @@
 package apireg
 
-import "time"
+import (
+	"github.com/ZacharyDuve/apireg/api"
+)
 
 type apiRegisterMessageJSON struct {
-	ApiName    string        `json:"api-name"`
-	ApiVersion *Version      `json:"api-version"`
-	ApiPort    int           `json:"api-port"`
-	LifeSpan   time.Duration `json:"reg-lifespan"`
+	ApiName    string       `json:"api-name"`
+	ApiVersion *api.Version `json:"api-version"`
+	ApiPort    int          `json:"api-port"`
 }

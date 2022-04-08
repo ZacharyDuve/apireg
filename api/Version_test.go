@@ -1,4 +1,4 @@
-package apireg
+package api
 
 import "testing"
 
