@@ -105,10 +105,6 @@ func sendApiRegistration(a api.Api) error {
 	return err
 }
 
-func computeOwnedRegKey(name, version string) string {
-	return fmt.Sprint(name, ":", version)
-}
-
 func (this *multicastApiRegistry) resendOwnedRegistrationsLoop() {
 	updateTicker := time.NewTicker(registrationUpdateInterval)
 	for range updateTicker.C {
@@ -159,21 +155,31 @@ func (this *multicastApiRegistry) listenMutlicast() {
 				if err != nil {
 					log.Println("Error generating new Api from message")
 				} else {
-					this.resetExpirationForApi(a)
+					this.updateForApi(a)
 				}
 			}
 		}
 	}
 }
 
-func (this *multicastApiRegistry) resetExpirationForApi(api api.Api) {
-	apisForName := this.apiRegs.GetAllRegsForName(api.Name())
+func (this *multicastApiRegistry) updateForApi(a api.Api) {
+	apisForName := this.apiRegs.GetAllRegsForName(a.Name())
 
-	if len(apisForName) > 0 {
+	if len(apisForName) == 0 {
+		reg, _ := store.NewApiRegistration(a, time.Now(), registrationLifeSpan)
+		this.apiRegs.AddReg(reg)
+	} else if len(apisForName) > 0 {
+		matched := false
 		for _, curReg := range apisForName {
-			if curReg.Api().Equal(api) {
+			if curReg.Api().Equal(a) {
 				curReg.UpdateTimeRegistered(time.Now())
+				matched = true
 			}
+		}
+
+		if !matched {
+			reg, _ := store.NewApiRegistration(a, time.Now(), registrationLifeSpan)
+			this.apiRegs.AddReg(reg)
 		}
 	}
 }
