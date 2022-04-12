@@ -11,6 +11,7 @@ import (
 
 	"github.com/ZacharyDuve/apireg/api"
 	"github.com/ZacharyDuve/apireg/environment"
+	"github.com/ZacharyDuve/apireg/event"
 	"github.com/ZacharyDuve/apireg/store"
 	"github.com/google/uuid"
 )
@@ -142,6 +143,14 @@ func (this *multicastApiRegistry) GetApisByApiName(name string) []api.Api {
 		apis[i] = curReg.Api()
 	}
 	return apis
+}
+
+func (this *multicastApiRegistry) AddListener(l event.RegistrationListener) {
+	this.apiRegs.AddListener(l)
+}
+
+func (this *multicastApiRegistry) RemoveListener(l event.RegistrationListener) {
+	this.apiRegs.RemoveListener(l)
 }
 
 func (this *multicastApiRegistry) listenMutlicast() {

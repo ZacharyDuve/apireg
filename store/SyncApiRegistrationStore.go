@@ -5,18 +5,21 @@ import (
 	"time"
 
 	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg/event"
 )
 
 type syncApiRegStore struct {
 	regs          map[string][]ApiRegistration
 	regsMutex     *sync.RWMutex
 	purgeTickChan <-chan time.Time
+	listeners     RegistrationListenerStore
 }
 
 func NewSyncApiRegistrationStore(pChan <-chan time.Time) ApiRegistrationStore {
 	syncStore := &syncApiRegStore{}
 	syncStore.regs = make(map[string][]ApiRegistration)
 	syncStore.regsMutex = &sync.RWMutex{}
+	syncStore.listeners = NewSyncRegistrationListenerStore()
 	//if we never provide a channel then auto purging is disabled
 	if pChan != nil {
 		syncStore.purgeTickChan = pChan
@@ -29,11 +32,13 @@ func NewSyncApiRegistrationStore(pChan <-chan time.Time) ApiRegistrationStore {
 func (this *syncApiRegStore) AddReg(reg ApiRegistration) {
 	this.regsMutex.Lock()
 	apis, contains := this.regs[reg.Api().Name()]
+	added := false
 
 	if !contains {
 		apis = make([]ApiRegistration, 1)
 		apis[0] = reg
 		this.regs[reg.Api().Name()] = apis
+		added = true
 	} else {
 		hasMatch := false
 		for _, curReg := range apis {
@@ -46,9 +51,14 @@ func (this *syncApiRegStore) AddReg(reg ApiRegistration) {
 		if !hasMatch {
 			apis = append(apis, reg)
 			this.regs[reg.Api().Name()] = apis
+			added = true
 		}
 	}
+	if added {
+		this.listeners.Notify(event.NewAddEvent(reg.Api()))
+	}
 	this.regsMutex.Unlock()
+
 }
 
 func apisMatch(api0, api1 api.Api) bool {
@@ -119,6 +129,8 @@ func (this *syncApiRegStore) RemoveRegForApi(old api.Api) error {
 				}
 			}
 		}
+		rEvent := event.NewRemovedEvent(old)
+		this.listeners.Notify(rEvent)
 	}
 	this.regsMutex.Unlock()
 	return nil
@@ -140,7 +152,7 @@ func (this *syncApiRegStore) purgeExpired(t time.Time) {
 	this.regsMutex.RUnlock()
 
 	for _, curName := range regNames {
-		this.getAllRegsForNameAndTime(curName, t)
+		this.purgeExpiredForNameAndTime(curName, t)
 	}
 }
 
@@ -156,4 +168,11 @@ func (this *syncApiRegStore) purgeExpiredForNameAndTime(name string, t time.Time
 			}
 		}
 	}
+}
+
+func (this *syncApiRegStore) AddListener(l event.RegistrationListener) {
+	this.listeners.Add(l)
+}
+func (this *syncApiRegStore) RemoveListener(l event.RegistrationListener) {
+	this.listeners.Remove(l)
 }
