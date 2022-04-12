@@ -69,7 +69,7 @@ func (this *multicastApiRegistry) RegisterApi(name string, version *api.Version,
 	if name == "" {
 		return errors.New("name was empty and name is a required parameter")
 	}
-	localApi, err := api.NewApi(name, version, net.ParseIP("127.0.0.1"), port)
+	localApi, err := api.NewApi(name, version, this.environment, net.ParseIP("127.0.0.1"), port)
 
 	if err != nil {
 		return err
@@ -170,7 +170,7 @@ func (this *multicastApiRegistry) listenMutlicast() {
 					continue
 				}
 				var a api.Api
-				a, err = api.NewApi(message.ApiName, message.ApiVersion, rAddr.IP, message.ApiPort)
+				a, err = api.NewApi(message.ApiName, message.ApiVersion, message.Environment, rAddr.IP, message.ApiPort)
 				if err != nil {
 					log.Println("Error generating new Api from message")
 				} else {

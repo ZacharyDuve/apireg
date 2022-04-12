@@ -3,6 +3,8 @@ package api
 import (
 	"errors"
 	"net"
+
+	"github.com/ZacharyDuve/apireg/environment"
 )
 
 type Api interface {
@@ -11,6 +13,7 @@ type Api interface {
 	HostIP() net.IP
 	HostPort() int
 	Equal(Api) bool
+	Environment() environment.Environment
 }
 
 type apiImpl struct {
@@ -18,9 +21,10 @@ type apiImpl struct {
 	version    *Version
 	remoteIP   net.IP
 	remotePort int
+	env        environment.Environment
 }
 
-func NewApi(name string, ver *Version, hostIP net.IP, port int) (Api, error) {
+func NewApi(name string, ver *Version, env environment.Environment, hostIP net.IP, port int) (Api, error) {
 	if name == "" {
 		return nil, errors.New("name is required for NewApi")
 	} else if ver == nil {
@@ -31,7 +35,7 @@ func NewApi(name string, ver *Version, hostIP net.IP, port int) (Api, error) {
 		return nil, errors.New("port must be > 0 for NewApi")
 	}
 
-	return &apiImpl{name: name, version: ver, remoteIP: hostIP, remotePort: port}, nil
+	return &apiImpl{name: name, version: ver, env: env, remoteIP: hostIP, remotePort: port}, nil
 }
 
 func (this *apiImpl) Name() string {
@@ -52,4 +56,8 @@ func (this *apiImpl) Equal(other Api) bool {
 		this.version.Equal(other.Version()) &&
 		this.remoteIP.Equal(other.HostIP()) &&
 		this.remotePort == other.HostPort()
+}
+
+func (this *apiImpl) Environment() environment.Environment {
+	return this.env
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg/environment"
 )
 
 func TestNewSyncApiRegistrationStoreWithTickerReturnsStore(t *testing.T) {
@@ -146,7 +147,7 @@ func TestThatGetAllForNameFiltersOutExpiredRegistrations(t *testing.T) {
 	store := NewSyncApiRegistrationStore(nil)
 
 	name := "Jerry"
-	api, _ := api.NewApi(name, &api.Version{}, net.ParseIP("192.168.0.3"), 8672)
+	api, _ := api.NewApi(name, &api.Version{}, environment.All, net.ParseIP("192.168.0.3"), 8672)
 	life := time.Second * 2
 	//Make it reged before now - life so it should be expired
 	timeReged := time.Now().Add(-1 * (life + time.Second*1))
@@ -189,7 +190,7 @@ func getValidApiRegWithName(name string) ApiRegistration {
 	if name == "" {
 		return getValidApiReg()
 	}
-	api, _ := api.NewApi(name, &api.Version{}, net.ParseIP("192.168.0.3"), 8323)
+	api, _ := api.NewApi(name, &api.Version{}, environment.All, net.ParseIP("192.168.0.3"), 8323)
 	retReg, _ := NewApiRegistration(api, time.Now(), time.Second*15)
 
 	return retReg

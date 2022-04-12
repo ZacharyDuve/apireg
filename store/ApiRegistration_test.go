@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg/environment"
 )
 
 func TestThatNewApiRegistrationReturnsErrorIfApiIsNil(t *testing.T) {
@@ -61,6 +62,6 @@ func TestThatRegistrationIsNotExpiredIfTimePassedInMoreThanRegTimePlusLife(t *te
 }
 
 func getValidApi() api.Api {
-	api, _ := api.NewApi("someApi", &api.Version{}, net.IPv4(192, 168, 0, 3), 8080)
+	api, _ := api.NewApi("someApi", &api.Version{}, environment.All, net.IPv4(192, 168, 0, 3), 8080)
 	return api
 }

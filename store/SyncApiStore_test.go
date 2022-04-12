@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg/environment"
 )
 
 func TestThatNewSyncApiStoreIsEmpty(t *testing.T) {
@@ -19,7 +20,7 @@ func TestThatAddingAnApiToAnApiStoreAddsIt(t *testing.T) {
 	s := NewSyncApiStore()
 
 	lenBefore := len(s.All())
-	a, _ := api.NewApi("Something", &api.Version{}, net.ParseIP("127.0.0.1"), 8712)
+	a, _ := api.NewApi("Something", &api.Version{}, environment.All, net.ParseIP("127.0.0.1"), 8712)
 	s.Add(a)
 
 	if lenBefore == len(s.All()) {
@@ -30,7 +31,7 @@ func TestThatAddingAnApiToAnApiStoreAddsIt(t *testing.T) {
 func TestThatAddingTheSameApiTwiceOnlyAddsItReallyOnce(t *testing.T) {
 	s := NewSyncApiStore()
 
-	a, _ := api.NewApi("Something", &api.Version{}, net.ParseIP("127.0.0.1"), 8712)
+	a, _ := api.NewApi("Something", &api.Version{}, environment.All, net.ParseIP("127.0.0.1"), 8712)
 	s.Add(a)
 	s.Add(a)
 	if 1 != len(s.All()) {
@@ -42,7 +43,7 @@ func TestThatRemovingAnApiFromStoreThatDoesntContainDoesNothing(t *testing.T) {
 	s := NewSyncApiStore()
 
 	lenBefore := len(s.All())
-	a, _ := api.NewApi("Something", &api.Version{}, net.ParseIP("127.0.0.1"), 8712)
+	a, _ := api.NewApi("Something", &api.Version{}, environment.All, net.ParseIP("127.0.0.1"), 8712)
 	s.Remove(a)
 
 	if lenBefore != len(s.All()) {
@@ -53,7 +54,7 @@ func TestThatRemovingAnApiFromStoreThatDoesntContainDoesNothing(t *testing.T) {
 func TestThatRemovingAnApiFromAStoreThatContainsItRemovesIt(t *testing.T) {
 	s := NewSyncApiStore()
 
-	a, _ := api.NewApi("Something", &api.Version{}, net.ParseIP("127.0.0.1"), 8712)
+	a, _ := api.NewApi("Something", &api.Version{}, environment.All, net.ParseIP("127.0.0.1"), 8712)
 	s.Add(a)
 	lenBefore := len(s.All())
 	s.Remove(a)
