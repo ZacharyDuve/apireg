@@ -2,11 +2,11 @@ package event
 
 import "github.com/ZacharyDuve/apireg/api"
 
-type EventType byte
+type EventType string
 
 const (
-	Added   EventType = 0
-	Removed EventType = 1
+	Added   EventType = "add"
+	Removed EventType = "remove"
 )
 
 type RegistrationEvent interface {

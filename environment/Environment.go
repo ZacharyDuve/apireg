@@ -3,7 +3,7 @@ package environment
 type Environment string
 
 const (
-	All     Environment = "a"
-	Prod    Environment = "p"
-	NonProd Environment = "n"
+	All     Environment = "all"
+	Prod    Environment = "prod"
+	NonProd Environment = "nonprod"
 )
