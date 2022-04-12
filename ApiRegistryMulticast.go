@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg/environment"
 	"github.com/ZacharyDuve/apireg/store"
 	"github.com/google/uuid"
 )
@@ -35,14 +36,16 @@ type multicastApiRegistry struct {
 	ownedApis          store.ApiStore
 	purgeExpiredTicker *time.Ticker
 	id                 string
+	environment        environment.Environment
 }
 
-func NewRegistry() (ApiRegistry, error) {
+func NewRegistry(e environment.Environment) (ApiRegistry, error) {
 	var err error
 	r := &multicastApiRegistry{}
 	r.purgeExpiredTicker = time.NewTicker(registrationPurgeInterval)
 	r.apiRegs = store.NewSyncApiRegistrationStore(r.purgeExpiredTicker.C)
 	r.id = uuid.New().String()
+	r.environment = e
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +92,7 @@ func (this *multicastApiRegistry) sendApiRegistration(a api.Api) error {
 		return err
 	}
 
-	message := &apiRegisterMessageJSON{ApiName: a.Name(), ApiVersion: a.Version(), ApiPort: a.HostPort(), SenderId: this.id}
+	message := &apiRegisterMessageJSON{ApiName: a.Name(), ApiVersion: a.Version(), ApiPort: a.HostPort(), SenderId: this.id, Environment: this.environment}
 
 	dataOut := bytes.NewBuffer(make([]byte, 0, registrationMessageSizeBytes))
 
@@ -153,8 +156,8 @@ func (this *multicastApiRegistry) listenMutlicast() {
 			if err != nil {
 				log.Println("Error decoding multicast json", err)
 			} else {
-				//If we got a message from ourselves then ignore it
-				if message.SenderId == this.id {
+				//If we got a message from ourselves or for another environment then ignore it
+				if message.SenderId == this.id || !shouldProcessMessage(this.environment, message.Environment) {
 					continue
 				}
 				var a api.Api
@@ -167,6 +170,21 @@ func (this *multicastApiRegistry) listenMutlicast() {
 			}
 		}
 	}
+}
+
+//Us	| Msg	| pro
+// A	| A		| Y
+// A	| P		| Y
+// A	| N		| Y
+// P	| A		| Y
+// P	| P		| Y
+// P	| N		| N
+// N	| A		| Y
+// N	| P		| N
+// N	| N		| Y
+
+func shouldProcessMessage(ourEnv, otherEnv environment.Environment) bool {
+	return ourEnv == environment.All || otherEnv == environment.All || ourEnv == otherEnv
 }
 
 func (this *multicastApiRegistry) updateForApi(a api.Api) {

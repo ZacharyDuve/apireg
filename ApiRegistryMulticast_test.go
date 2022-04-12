@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg/environment"
 )
 
 func TestMainForMulticastRegistry(t *testing.T) {
 	log.Println("Hello")
-	r, err := NewRegistry()
+	r, err := NewRegistry(environment.All)
 
 	failOnErr(err, t)
 
@@ -21,10 +22,10 @@ func TestMainForMulticastRegistry(t *testing.T) {
 }
 
 func TestThatTwoRegistriesRegisterEachOther(t *testing.T) {
-	reg0, err := NewRegistry()
+	reg0, err := NewRegistry(environment.All)
 	failOnErr(err, t)
 
-	reg1, err := NewRegistry()
+	reg1, err := NewRegistry(environment.All)
 	failOnErr(err, t)
 	reg0ApiName := "Something"
 	reg0ApiVersion := &api.Version{Major: 0, Minor: 1, BugFix: 3}
