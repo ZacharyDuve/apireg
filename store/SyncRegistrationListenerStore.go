@@ -22,7 +22,7 @@ func NewSyncRegistrationListenerStore() RegistrationListenerStore {
 func (this *syncRegListenStore) Add(l event.RegistrationListener) {
 	this.listenersMutex.Lock()
 	this.listeners = append(this.listeners, l)
-	this.listenersMutex.RUnlock()
+	this.listenersMutex.Unlock()
 }
 func (this *syncRegListenStore) Remove(l event.RegistrationListener) {
 	this.listenersMutex.Lock()
@@ -32,7 +32,7 @@ func (this *syncRegListenStore) Remove(l event.RegistrationListener) {
 			break
 		}
 	}
-	this.listenersMutex.RUnlock()
+	this.listenersMutex.Unlock()
 }
 func (this *syncRegListenStore) Notify(e event.RegistrationEvent) {
 	go func() {
