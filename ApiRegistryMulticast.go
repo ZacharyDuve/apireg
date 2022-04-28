@@ -13,7 +13,7 @@ import (
 	"github.com/ZacharyDuve/apireg/environment"
 	"github.com/ZacharyDuve/apireg/event"
 	"github.com/ZacharyDuve/apireg/store"
-	"github.com/google/uuid"
+	"github.com/ZacharyDuve/serverid"
 )
 
 const (
@@ -45,7 +45,11 @@ func NewRegistry(e environment.Environment) (ApiRegistry, error) {
 	r := &multicastApiRegistry{}
 	r.purgeExpiredTicker = time.NewTicker(registrationPurgeInterval)
 	r.apiRegs = store.NewSyncApiRegistrationStore(r.purgeExpiredTicker.C)
-	r.id = uuid.New().String()
+	sIdSvc, err := serverid.NewFileServerIdService("")
+	if err != nil {
+		return nil, err
+	}
+	r.id = sIdSvc.GetServerId().String()
 	r.environment = e
 	if err != nil {
 		return nil, err

@@ -1,0 +1,6 @@
+
+#skip the build dir
+build/
+
+.DS_Store
+server-id.json
