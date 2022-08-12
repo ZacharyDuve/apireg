@@ -1,6 +1,6 @@
 package event
 
-import "github.com/ZacharyDuve/apireg/api"
+import "git.zmanhobbies.com/software/apireg/api"
 
 type EventType string
 

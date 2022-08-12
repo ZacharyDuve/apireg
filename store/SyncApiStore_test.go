@@ -4,8 +4,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/ZacharyDuve/apireg/api"
-	"github.com/ZacharyDuve/apireg/environment"
+	"git.zmanhobbies.com/software/apireg/api"
+	"git.zmanhobbies.com/software/apireg/environment"
 )
 
 func TestThatNewSyncApiStoreIsEmpty(t *testing.T) {

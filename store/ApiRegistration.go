@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ZacharyDuve/apireg/api"
+	"git.zmanhobbies.com/software/apireg/api"
 )
 
 type ApiRegistration interface {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net"
 
-	"github.com/ZacharyDuve/apireg/environment"
+	"git.zmanhobbies.com/software/apireg/environment"
 )
 
 type Api interface {

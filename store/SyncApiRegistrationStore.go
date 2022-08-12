@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ZacharyDuve/apireg/api"
-	"github.com/ZacharyDuve/apireg/event"
+	"git.zmanhobbies.com/software/apireg/api"
+	"git.zmanhobbies.com/software/apireg/event"
 )
 
 type syncApiRegStore struct {
