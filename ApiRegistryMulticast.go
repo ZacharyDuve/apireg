@@ -9,11 +9,11 @@ import (
 	"net"
 	"time"
 
-	"git.zmanhobbies.com/software/apireg/api"
-	"git.zmanhobbies.com/software/apireg/environment"
-	"git.zmanhobbies.com/software/apireg/event"
-	"git.zmanhobbies.com/software/apireg/store"
-	"git.zmanhobbies.com/software/serverid"
+	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg/environment"
+	"github.com/ZacharyDuve/apireg/event"
+	"github.com/ZacharyDuve/apireg/store"
+	"github.com/ZacharyDuve/serverid"
 )
 
 const (

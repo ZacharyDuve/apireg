@@ -1,7 +1,7 @@
 package store
 
 import (
-	"git.zmanhobbies.com/software/apireg/api"
+	"github.com/ZacharyDuve/apireg/api"
 )
 
 type ApiStore interface {

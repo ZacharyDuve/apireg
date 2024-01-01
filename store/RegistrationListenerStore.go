@@ -1,6 +1,6 @@
 package store
 
-import "git.zmanhobbies.com/software/apireg/event"
+import "github.com/ZacharyDuve/apireg/event"
 
 type RegistrationListenerStore interface {
 	Add(event.RegistrationListener)

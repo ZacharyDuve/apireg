@@ -3,7 +3,7 @@ package store
 import (
 	"sync"
 
-	"git.zmanhobbies.com/software/apireg/event"
+	"github.com/ZacharyDuve/apireg/event"
 )
 
 type syncRegListenStore struct {
