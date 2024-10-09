@@ -2,7 +2,7 @@ package store
 
 import (
 	"github.com/ZacharyDuve/apireg/api"
-	"github.com/ZacharyDuve/apireg/event"
+	"github.com/ZacharyDuve/apireg/apievent"
 )
 
 type ApiRegistrationStore interface {
@@ -15,6 +15,6 @@ type ApiRegistrationStore interface {
 	//Remove the registration that we have for a given Api
 	RemoveRegForApi(api.Api) error
 
-	AddListener(event.RegistrationListener)
-	RemoveListener(event.RegistrationListener)
+	AddListener(apievent.RegistrationListener)
+	RemoveListener(apievent.RegistrationListener)
 }

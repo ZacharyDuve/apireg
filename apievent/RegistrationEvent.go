@@ -1,4 +1,4 @@
-package event
+package apievent
 
 import "github.com/ZacharyDuve/apireg/api"
 

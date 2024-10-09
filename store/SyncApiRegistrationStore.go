@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/ZacharyDuve/apireg/api"
-	"github.com/ZacharyDuve/apireg/event"
+	"github.com/ZacharyDuve/apireg/apievent"
 )
 
 type syncApiRegStore struct {
@@ -55,7 +55,7 @@ func (this *syncApiRegStore) AddReg(reg ApiRegistration) {
 		}
 	}
 	if added {
-		this.listeners.Notify(event.NewAddEvent(reg.Api()))
+		this.listeners.Notify(apievent.NewAddEvent(reg.Api()))
 	}
 	this.regsMutex.Unlock()
 
@@ -129,7 +129,7 @@ func (this *syncApiRegStore) RemoveRegForApi(old api.Api) error {
 				}
 			}
 		}
-		rEvent := event.NewRemovedEvent(old)
+		rEvent := apievent.NewRemovedEvent(old)
 		this.listeners.Notify(rEvent)
 	}
 	this.regsMutex.Unlock()
@@ -170,9 +170,9 @@ func (this *syncApiRegStore) purgeExpiredForNameAndTime(name string, t time.Time
 	}
 }
 
-func (this *syncApiRegStore) AddListener(l event.RegistrationListener) {
+func (this *syncApiRegStore) AddListener(l apievent.RegistrationListener) {
 	this.listeners.Add(l)
 }
-func (this *syncApiRegStore) RemoveListener(l event.RegistrationListener) {
+func (this *syncApiRegStore) RemoveListener(l apievent.RegistrationListener) {
 	this.listeners.Remove(l)
 }

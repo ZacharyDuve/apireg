@@ -7,11 +7,12 @@ import (
 
 	"github.com/ZacharyDuve/apireg/api"
 	"github.com/ZacharyDuve/apireg/environment"
+	"github.com/google/uuid"
 )
 
 func TestMainForMulticastRegistry(t *testing.T) {
 	log.Println("Hello")
-	r, err := NewRegistry(environment.All)
+	r, err := NewMulticastRegistry(nil, environment.All, uuid.New())
 
 	failOnErr(err, t)
 
@@ -22,10 +23,10 @@ func TestMainForMulticastRegistry(t *testing.T) {
 }
 
 func TestThatTwoRegistriesRegisterEachOther(t *testing.T) {
-	reg0, err := NewRegistry(environment.All)
+	reg0, err := NewMulticastRegistry(nil, environment.All, uuid.New())
 	failOnErr(err, t)
 
-	reg1, err := NewRegistry(environment.All)
+	reg1, err := NewMulticastRegistry(nil, environment.All, uuid.New())
 	failOnErr(err, t)
 	reg0ApiName := "Something"
 	reg0ApiVersion := &api.Version{Major: 0, Minor: 1, BugFix: 3}
@@ -47,7 +48,6 @@ func TestThatTwoRegistriesRegisterEachOther(t *testing.T) {
 	if reg1.GetApisByApiName(reg0ApiName) == nil || len(reg1.GetApisByApiName(reg0ApiName)) == 0 {
 		t.Fail()
 	}
-
 }
 
 func failOnErr(err error, t *testing.T) {

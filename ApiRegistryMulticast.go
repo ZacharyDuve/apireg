@@ -10,15 +10,15 @@ import (
 	"time"
 
 	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg/apievent"
 	"github.com/ZacharyDuve/apireg/environment"
-	"github.com/ZacharyDuve/apireg/event"
 	"github.com/ZacharyDuve/apireg/store"
-	"github.com/ZacharyDuve/serverid"
+	"github.com/google/uuid"
 )
 
 const (
-	multicastGroupIP             string        = "224.0.0.78"
-	multicastGroupPort           int           = 5324
+	DEFAULT_MULTICAST_GROUP_IP   string        = "224.0.0.78"
+	DEFAULT_MULTICAST_GROUP_PORT int           = 5324
 	registrationMessageSizeBytes int           = 1400
 	registrationLifeSpan         time.Duration = registrationUpdateInterval * 4
 	registrationUpdateInterval   time.Duration = time.Second * 15
@@ -32,32 +32,31 @@ type ownedApi struct {
 }
 
 type multicastApiRegistry struct {
+	mAddr              *net.UDPAddr
 	mConn              *net.UDPConn
 	apiRegs            store.ApiRegistrationStore
 	ownedApis          store.ApiStore
 	purgeExpiredTicker *time.Ticker
-	id                 string
+	id                 uuid.UUID
 	environment        environment.Environment
 }
 
-func NewRegistry(e environment.Environment) (ApiRegistry, error) {
-	var err error
+func NewMulticastRegistry(lAddr *net.UDPAddr, e environment.Environment, sId uuid.UUID) (ApiRegistry, error) {
+	//If we are not passed in a lAddr then lets set to defaults
+	if lAddr == nil {
+		lAddr = &net.UDPAddr{IP: net.ParseIP(DEFAULT_MULTICAST_GROUP_IP), Port: DEFAULT_MULTICAST_GROUP_PORT}
+	}
+
 	r := &multicastApiRegistry{}
 	r.purgeExpiredTicker = time.NewTicker(registrationPurgeInterval)
 	r.apiRegs = store.NewSyncApiRegistrationStore(r.purgeExpiredTicker.C)
-	sIdSvc, err := serverid.NewFileServerIdService("")
-	if err != nil {
-		return nil, err
-	}
-	r.id = sIdSvc.GetServerId().String()
+	r.id = sId
 	r.environment = e
-	if err != nil {
-		return nil, err
-	}
+	r.mAddr = lAddr
 
 	r.ownedApis = store.NewSyncApiStore()
 
-	mC, err := net.ListenMulticastUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP(multicastGroupIP), Port: multicastGroupPort})
+	mC, err := net.ListenMulticastUDP("udp", nil, lAddr)
 
 	if err != nil {
 		return nil, err
@@ -73,11 +72,13 @@ func (this *multicastApiRegistry) RegisterApi(name string, version *api.Version,
 	if name == "" {
 		return errors.New("name was empty and name is a required parameter")
 	}
-	localApi, err := api.NewApi(name, version, this.environment, net.ParseIP("127.0.0.1"), port)
+	//We just set a bogus ip as listeners don't get this ip but from the actual packet
+	localApi, err := api.NewApi(name, version, this.environment, net.ParseIP("0.0.0.0"), port)
 
 	if err != nil {
 		return err
 	}
+	//If we already know that we have registered this api from us then don't re-register it
 	if this.ownedApis.Contains(localApi) {
 		return nil
 	}
@@ -91,13 +92,13 @@ func (this *multicastApiRegistry) RegisterApi(name string, version *api.Version,
 }
 
 func (this *multicastApiRegistry) sendApiRegistration(a api.Api) error {
-	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.ParseIP(multicastGroupIP), Port: multicastGroupPort})
+	conn, err := net.DialUDP("udp", nil, this.mAddr)
 
 	if err != nil {
 		return err
 	}
 
-	message := &apiRegisterMessageJSON{ApiName: a.Name(), ApiVersion: a.Version(), ApiPort: a.HostPort(), SenderId: this.id, Environment: this.environment}
+	message := &apiRegisterMessageJSON{ApiName: a.Name(), ApiVersion: a.Version(), ApiPort: a.HostPort(), SenderId: this.id.String(), Environment: this.environment}
 
 	dataOut := bytes.NewBuffer(make([]byte, 0, registrationMessageSizeBytes))
 
@@ -149,11 +150,11 @@ func (this *multicastApiRegistry) GetApisByApiName(name string) []api.Api {
 	return apis
 }
 
-func (this *multicastApiRegistry) AddListener(l event.RegistrationListener) {
+func (this *multicastApiRegistry) AddListener(l apievent.RegistrationListener) {
 	this.apiRegs.AddListener(l)
 }
 
-func (this *multicastApiRegistry) RemoveListener(l event.RegistrationListener) {
+func (this *multicastApiRegistry) RemoveListener(l apievent.RegistrationListener) {
 	this.apiRegs.RemoveListener(l)
 }
 
@@ -169,8 +170,9 @@ func (this *multicastApiRegistry) listenMutlicast() {
 			if err != nil {
 				log.Println("Error decoding multicast json", err)
 			} else {
+				ourIDAsString := this.id.String()
 				//If we got a message from ourselves or for another environment then ignore it
-				if message.SenderId == this.id || !shouldProcessMessage(this.environment, message.Environment) {
+				if message.SenderId == ourIDAsString || !shouldProcessMessage(this.environment, message.Environment) {
 					continue
 				}
 				var a api.Api
