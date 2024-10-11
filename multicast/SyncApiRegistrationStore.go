@@ -4,22 +4,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ZacharyDuve/apireg/api"
-	"github.com/ZacharyDuve/apireg/apievent"
+	"github.com/ZacharyDuve/apireg"
 )
 
 type syncApiRegStore struct {
-	regs          map[string][]ApiRegistration
+	regs          map[string][]*apiRegistration
 	regsMutex     *sync.RWMutex
 	purgeTickChan <-chan time.Time
-	listeners     RegistrationListenerStore
+	listeners     *syncRegListenStore
 }
 
-func NewSyncApiRegistrationStore(pChan <-chan time.Time) ApiRegistrationStore {
+func newSyncApiRegistrationStore(pChan <-chan time.Time) *syncApiRegStore {
 	syncStore := &syncApiRegStore{}
-	syncStore.regs = make(map[string][]ApiRegistration)
+	syncStore.regs = make(map[string][]*apiRegistration)
 	syncStore.regsMutex = &sync.RWMutex{}
-	syncStore.listeners = NewSyncRegistrationListenerStore()
+	syncStore.listeners = newSyncRegistrationListenerStore()
 	//if we never provide a channel then auto purging is disabled
 	if pChan != nil {
 		syncStore.purgeTickChan = pChan
@@ -29,13 +28,13 @@ func NewSyncApiRegistrationStore(pChan <-chan time.Time) ApiRegistrationStore {
 	return syncStore
 }
 
-func (this *syncApiRegStore) AddReg(reg ApiRegistration) {
+func (this *syncApiRegStore) AddReg(reg *apiRegistration) {
 	this.regsMutex.Lock()
 	apis, contains := this.regs[reg.Api().Name()]
 	added := false
 
 	if !contains {
-		apis = make([]ApiRegistration, 1)
+		apis = make([]*apiRegistration, 1)
 		apis[0] = reg
 		this.regs[reg.Api().Name()] = apis
 		added = true
@@ -55,31 +54,31 @@ func (this *syncApiRegStore) AddReg(reg ApiRegistration) {
 		}
 	}
 	if added {
-		this.listeners.Notify(apievent.NewAddEvent(reg.Api()))
+		this.listeners.Notify(apireg.NewAddEvent(reg.Api()))
 	}
 	this.regsMutex.Unlock()
 
 }
 
-func apisMatch(api0, api1 api.Api) bool {
+func apisMatch(api0, api1 apireg.Api) bool {
 	return api0.Name() == api1.Name() &&
 		api0.Version().Equal(api1.Version()) &&
 		api0.HostIP().Equal(api1.HostIP()) &&
 		api0.HostPort() == api1.HostPort()
 }
 
-func (this *syncApiRegStore) GetAllRegsForName(name string) []ApiRegistration {
+func (this *syncApiRegStore) GetAllRegsForName(name string) []*apiRegistration {
 	return this.getAllRegsForNameAndTime(name, time.Now())
 }
 
-func (this *syncApiRegStore) getAllRegsForNameAndTime(name string, time time.Time) []ApiRegistration {
-	var matchingApis []ApiRegistration
+func (this *syncApiRegStore) getAllRegsForNameAndTime(name string, time time.Time) []*apiRegistration {
+	var matchingApis []*apiRegistration
 	this.regsMutex.RLock()
 	regs, contains := this.regs[name]
 	this.regsMutex.RUnlock()
 
 	if contains {
-		matchingApis = make([]ApiRegistration, 0, len(regs))
+		matchingApis = make([]*apiRegistration, 0, len(regs))
 
 		for _, curReg := range regs {
 			if curReg.Expired(time) {
@@ -93,11 +92,11 @@ func (this *syncApiRegStore) getAllRegsForNameAndTime(name string, time time.Tim
 	return matchingApis
 }
 
-func (this *syncApiRegStore) GetAllRegs() []ApiRegistration {
+func (this *syncApiRegStore) GetAllRegs() []*apiRegistration {
 	return this.getAllRegsForTime(time.Now())
 }
 
-func (this *syncApiRegStore) getAllRegsForTime(t time.Time) []ApiRegistration {
+func (this *syncApiRegStore) getAllRegsForTime(t time.Time) []*apiRegistration {
 	//Pulling list of names first from regs so we can release lock from Read mode as GetAllRegs could request lock for Write mode for an expired record
 	this.regsMutex.RLock()
 	regNames := make([]string, 0, len(this.regs))
@@ -106,14 +105,14 @@ func (this *syncApiRegStore) getAllRegsForTime(t time.Time) []ApiRegistration {
 	}
 	this.regsMutex.RUnlock()
 
-	regs := make([]ApiRegistration, 0)
+	regs := make([]*apiRegistration, 0)
 	for _, curName := range regNames {
 		regs = append(regs, this.getAllRegsForNameAndTime(curName, t)...)
 	}
 	return regs
 }
 
-func (this *syncApiRegStore) RemoveRegForApi(old api.Api) error {
+func (this *syncApiRegStore) RemoveRegForApi(old apireg.Api) error {
 	this.regsMutex.Lock()
 	apis, contains := this.regs[old.Name()]
 
@@ -129,7 +128,7 @@ func (this *syncApiRegStore) RemoveRegForApi(old api.Api) error {
 				}
 			}
 		}
-		rEvent := apievent.NewRemovedEvent(old)
+		rEvent := apireg.NewRemovedEvent(old)
 		this.listeners.Notify(rEvent)
 	}
 	this.regsMutex.Unlock()
@@ -170,9 +169,9 @@ func (this *syncApiRegStore) purgeExpiredForNameAndTime(name string, t time.Time
 	}
 }
 
-func (this *syncApiRegStore) AddListener(l apievent.RegistrationListener) {
+func (this *syncApiRegStore) AddListener(l apireg.RegistrationListener) {
 	this.listeners.Add(l)
 }
-func (this *syncApiRegStore) RemoveListener(l apievent.RegistrationListener) {
+func (this *syncApiRegStore) RemoveListener(l apireg.RegistrationListener) {
 	this.listeners.Remove(l)
 }

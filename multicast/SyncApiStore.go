@@ -3,23 +3,23 @@ package multicast
 import (
 	"sync"
 
-	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg"
 )
 
 type syncApiStore struct {
-	apis      []api.Api
+	apis      []apireg.Api
 	apisMutex *sync.RWMutex
 }
 
-func NewSyncApiStore() ApiStore {
+func newSyncApiStore() *syncApiStore {
 	s := &syncApiStore{}
-	s.apis = make([]api.Api, 0)
+	s.apis = make([]apireg.Api, 0)
 	s.apisMutex = &sync.RWMutex{}
 
 	return s
 }
 
-func (this *syncApiStore) Add(newApi api.Api) bool {
+func (this *syncApiStore) Add(newApi apireg.Api) bool {
 	var added bool
 	contains := this.Contains(newApi)
 
@@ -31,16 +31,16 @@ func (this *syncApiStore) Add(newApi api.Api) bool {
 	return added
 }
 
-func (this *syncApiStore) All() []api.Api {
+func (this *syncApiStore) All() []apireg.Api {
 	this.apisMutex.RLock()
-	apisCopy := make([]api.Api, len(this.apis))
+	apisCopy := make([]apireg.Api, len(this.apis))
 	copy(apisCopy, this.apis)
 	this.apisMutex.RUnlock()
 
 	return this.apis
 }
 
-func (this *syncApiStore) Contains(a api.Api) bool {
+func (this *syncApiStore) Contains(a apireg.Api) bool {
 	var contains bool
 	this.apisMutex.RLock()
 	for _, curApi := range this.apis {
@@ -53,7 +53,7 @@ func (this *syncApiStore) Contains(a api.Api) bool {
 	return contains
 }
 
-func (this *syncApiStore) Remove(r api.Api) bool {
+func (this *syncApiStore) Remove(r apireg.Api) bool {
 	var removed bool
 
 	this.apisMutex.Lock()

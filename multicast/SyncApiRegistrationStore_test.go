@@ -5,26 +5,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ZacharyDuve/apireg/api"
-	"github.com/ZacharyDuve/apireg/environment"
+	"github.com/ZacharyDuve/apireg"
 )
 
 func TestNewSyncApiRegistrationStoreWithTickerReturnsStore(t *testing.T) {
 	ticker := get30sTicker()
 
-	if NewSyncApiRegistrationStore(ticker) == nil {
+	if newSyncApiRegistrationStore(ticker) == nil {
 		t.Fail()
 	}
 }
 
 func TestThatNewSyncApiRegistrationStoreWithNoTickerReturnsStore(t *testing.T) {
-	if NewSyncApiRegistrationStore(nil) == nil {
+	if newSyncApiRegistrationStore(nil) == nil {
 		t.Fail()
 	}
 }
 
 func TestThatGetAllRegsReturnsEmptyListForNewSyncStore(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
+	store := newSyncApiRegistrationStore(nil)
 	allRegs := store.GetAllRegs()
 	if allRegs == nil || len(allRegs) != 0 {
 		t.Fail()
@@ -32,7 +31,7 @@ func TestThatGetAllRegsReturnsEmptyListForNewSyncStore(t *testing.T) {
 }
 
 func TestThatGetAllReturnsListOfLen1AfterAddingNewRegistration(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
+	store := newSyncApiRegistrationStore(nil)
 
 	store.AddReg(getValidApiReg())
 	allRegs := store.GetAllRegs()
@@ -42,7 +41,7 @@ func TestThatGetAllReturnsListOfLen1AfterAddingNewRegistration(t *testing.T) {
 }
 
 func TestThatAddingTheSameRegAgainDoesntAddAnotherRegistration(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
+	store := newSyncApiRegistrationStore(nil)
 
 	reg := getValidApiReg()
 
@@ -56,10 +55,10 @@ func TestThatAddingTheSameRegAgainDoesntAddAnotherRegistration(t *testing.T) {
 }
 
 func TestThatAddingAtLeastTwoUniqueRegsAddsAsMany(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
-	reg0 := getValidApiRegWithName("Steve")
+	store := newSyncApiRegistrationStore(nil)
+	reg0 := getValidApiRegWithNameAndVersion("Steve", apireg.NewVersion(1, 0, 0))
 	store.AddReg(reg0)
-	reg1 := getValidApiRegWithName("Bob")
+	reg1 := getValidApiRegWithNameAndVersion("Bob", apireg.NewVersion(1, 0, 0))
 	store.AddReg(reg1)
 
 	allRegs := store.GetAllRegs()
@@ -69,14 +68,12 @@ func TestThatAddingAtLeastTwoUniqueRegsAddsAsMany(t *testing.T) {
 }
 
 func TestThatAddingAtLeastTwoUniqueRegsWithSameNameAddsAsMany(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
+	store := newSyncApiRegistrationStore(nil)
 	name := "Jerry"
 	var majVersion uint = 6
-	reg0 := getValidApiRegWithName(name)
-	reg0.Api().Version().Major = majVersion
+	reg0 := getValidApiRegWithNameAndVersion(name, apireg.NewVersion(majVersion, 0, 0))
 	store.AddReg(reg0)
-	reg1 := getValidApiRegWithName(name)
-	reg1.Api().Version().Major = majVersion + 1
+	reg1 := getValidApiRegWithNameAndVersion(name, apireg.NewVersion(majVersion+1, 0, 0))
 	store.AddReg(reg1)
 
 	allRegs := store.GetAllRegs()
@@ -86,7 +83,7 @@ func TestThatAddingAtLeastTwoUniqueRegsWithSameNameAddsAsMany(t *testing.T) {
 }
 
 func TestThatRemovingFromEmptyRegistrationStoreDoesNothing(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
+	store := newSyncApiRegistrationStore(nil)
 
 	reg := getValidApiReg()
 
@@ -100,14 +97,12 @@ func TestThatRemovingFromEmptyRegistrationStoreDoesNothing(t *testing.T) {
 }
 
 func TestThatRemovingAnApiWithStoreContainingSameNameButDifferentVersionDoesNotRemoveExisting(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
+	store := newSyncApiRegistrationStore(nil)
 	name := "Jerry"
 	var majVersion uint = 6
-	reg0 := getValidApiRegWithName(name)
-	reg0.Api().Version().Major = majVersion
+	reg0 := getValidApiRegWithNameAndVersion(name, apireg.NewVersion(majVersion, 0, 0))
 	store.AddReg(reg0)
-	reg1 := getValidApiRegWithName(name)
-	reg1.Api().Version().Major = majVersion + 1
+	reg1 := getValidApiRegWithNameAndVersion(name, apireg.NewVersion(majVersion+1, 0, 0))
 	store.RemoveRegForApi(reg1.Api())
 	allRegs := store.GetAllRegs()
 	if len(allRegs) != 1 {
@@ -116,7 +111,7 @@ func TestThatRemovingAnApiWithStoreContainingSameNameButDifferentVersionDoesNotR
 }
 
 func TestThatRemovingAnApiFromStoreContainingItActuallyRemoves(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
+	store := newSyncApiRegistrationStore(nil)
 	reg := getValidApiReg()
 	store.AddReg(reg)
 	sizeBefore := len(store.GetAllRegs())
@@ -127,14 +122,12 @@ func TestThatRemovingAnApiFromStoreContainingItActuallyRemoves(t *testing.T) {
 }
 
 func TestThatStoreContainingMultipleRegsForSameNameOnlyRemovesOneWhileKeepingRest(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
+	store := newSyncApiRegistrationStore(nil)
 	name := "Jerry"
 	var majVersion uint = 6
-	reg0 := getValidApiRegWithName(name)
-	reg0.Api().Version().Major = majVersion
+	reg0 := getValidApiRegWithNameAndVersion(name, apireg.NewVersion(majVersion, 0, 0))
 	store.AddReg(reg0)
-	reg1 := getValidApiRegWithName(name)
-	reg1.Api().Version().Major = majVersion + 1
+	reg1 := getValidApiRegWithNameAndVersion(name, apireg.NewVersion(majVersion+1, 0, 0))
 	store.AddReg(reg1)
 	store.RemoveRegForApi(reg1.Api())
 	allRegs := store.GetAllRegsForName(name)
@@ -144,15 +137,15 @@ func TestThatStoreContainingMultipleRegsForSameNameOnlyRemovesOneWhileKeepingRes
 }
 
 func TestThatGetAllForNameFiltersOutExpiredRegistrations(t *testing.T) {
-	store := NewSyncApiRegistrationStore(nil)
+	store := newSyncApiRegistrationStore(nil)
 
 	name := "Jerry"
-	api, _ := api.NewApi(name, &api.Version{}, environment.All, net.ParseIP("192.168.0.3"), 8672)
+	api, _ := apireg.NewApi(name, apireg.NewVersion(0, 0, 1), apireg.All, net.ParseIP("192.168.0.3"), 8672)
 	life := time.Second * 2
 	//Make it reged before now - life so it should be expired
 	timeReged := time.Now().Add(-1 * (life + time.Second*1))
 
-	reg, _ := NewApiRegistration(api, timeReged, life)
+	reg, _ := newApiRegistration(api, timeReged, life)
 	store.AddReg(reg)
 	regs := store.GetAllRegsForName(name)
 
@@ -167,9 +160,9 @@ func TestThatExpiredRegsArePurgedWhenPurgeExpiredIsCalled(t *testing.T) {
 	//Make so it has expired already
 	regTime := now.Add(-1 * (life + time.Second*1))
 	api := getValidApi()
-	reg, _ := NewApiRegistration(api, regTime, life)
+	reg, _ := newApiRegistration(api, regTime, life)
 	purgeTickChan := make(chan time.Time)
-	store := NewSyncApiRegistrationStore(purgeTickChan)
+	store := newSyncApiRegistrationStore(purgeTickChan)
 
 	store.AddReg(reg)
 
@@ -180,18 +173,18 @@ func TestThatExpiredRegsArePurgedWhenPurgeExpiredIsCalled(t *testing.T) {
 	}
 }
 
-func getValidApiReg() ApiRegistration {
-	reg, _ := NewApiRegistration(getValidApi(), time.Now(), time.Second*15)
+func getValidApiReg() *apiRegistration {
+	reg, _ := newApiRegistration(getValidApi(), time.Now(), time.Second*15)
 
 	return reg
 }
 
-func getValidApiRegWithName(name string) ApiRegistration {
+func getValidApiRegWithNameAndVersion(name string, version apireg.Version) *apiRegistration {
 	if name == "" {
 		return getValidApiReg()
 	}
-	api, _ := api.NewApi(name, &api.Version{}, environment.All, net.ParseIP("192.168.0.3"), 8323)
-	retReg, _ := NewApiRegistration(api, time.Now(), time.Second*15)
+	api, _ := apireg.NewApi(name, version, apireg.All, net.ParseIP("192.168.0.3"), 8323)
+	retReg, _ := newApiRegistration(api, time.Now(), time.Second*15)
 
 	return retReg
 }

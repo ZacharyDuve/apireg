@@ -3,28 +3,28 @@ package multicast
 import (
 	"sync"
 
-	"github.com/ZacharyDuve/apireg/apievent"
+	"github.com/ZacharyDuve/apireg"
 )
 
 type syncRegListenStore struct {
-	listeners      []apievent.RegistrationListener
+	listeners      []apireg.RegistrationListener
 	listenersMutex *sync.RWMutex
 }
 
-func NewSyncRegistrationListenerStore() RegistrationListenerStore {
+func newSyncRegistrationListenerStore() *syncRegListenStore {
 	s := &syncRegListenStore{}
-	s.listeners = make([]apievent.RegistrationListener, 0)
+	s.listeners = make([]apireg.RegistrationListener, 0)
 	s.listenersMutex = &sync.RWMutex{}
 
 	return s
 }
 
-func (this *syncRegListenStore) Add(l apievent.RegistrationListener) {
+func (this *syncRegListenStore) Add(l apireg.RegistrationListener) {
 	this.listenersMutex.Lock()
 	this.listeners = append(this.listeners, l)
 	this.listenersMutex.Unlock()
 }
-func (this *syncRegListenStore) Remove(l apievent.RegistrationListener) {
+func (this *syncRegListenStore) Remove(l apireg.RegistrationListener) {
 	this.listenersMutex.Lock()
 	for i, curL := range this.listeners {
 		if curL == l {
@@ -34,7 +34,7 @@ func (this *syncRegListenStore) Remove(l apievent.RegistrationListener) {
 	}
 	this.listenersMutex.Unlock()
 }
-func (this *syncRegListenStore) Notify(e apievent.RegistrationEvent) {
+func (this *syncRegListenStore) Notify(e apireg.RegistrationEvent) {
 	go func() {
 		this.listenersMutex.RLock()
 		for _, curL := range this.listeners {

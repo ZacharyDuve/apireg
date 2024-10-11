@@ -9,9 +9,7 @@ import (
 	"net"
 	"time"
 
-	//TODO: This is an import of store
 	"github.com/ZacharyDuve/apireg"
-	"github.com/ZacharyDuve/apireg/store"
 	"github.com/google/uuid"
 )
 
@@ -34,9 +32,9 @@ type multicastApiRegistry struct {
 	mAddr *net.UDPAddr
 	mConn *net.UDPConn
 	//Need to save all of the apis that have been registered externally
-	apiRegs store.ApiRegistrationStore
+	apiRegs *syncApiRegStore
 	//Need to know which api registrations are ours so that due to multicast we can double check
-	ownedApis          store.ApiStore
+	ownedApis          *syncApiStore
 	purgeExpiredTicker *time.Ticker
 	id                 uuid.UUID
 	environment        apireg.Environment
@@ -50,12 +48,12 @@ func NewMulticastRegistry(lAddr *net.UDPAddr, e apireg.Environment, sId uuid.UUI
 
 	r := &multicastApiRegistry{}
 	r.purgeExpiredTicker = time.NewTicker(registrationPurgeInterval)
-	r.apiRegs = store.NewSyncApiRegistrationStore(r.purgeExpiredTicker.C)
+	r.apiRegs = newSyncApiRegistrationStore(r.purgeExpiredTicker.C)
 	r.id = sId
 	r.environment = e
 	r.mAddr = lAddr
 
-	r.ownedApis = store.NewSyncApiStore()
+	r.ownedApis = newSyncApiStore()
 
 	mC, err := net.ListenMulticastUDP("udp", nil, lAddr)
 
@@ -156,11 +154,11 @@ func (this *multicastApiRegistry) GetApisByApiName(name string) []apireg.Api {
 	return apis
 }
 
-func (this *multicastApiRegistry) AddListener(l apireg.RegistrationListener) {
+func (this *multicastApiRegistry) AddEventListener(l apireg.RegistrationListener) {
 	this.apiRegs.AddListener(l)
 }
 
-func (this *multicastApiRegistry) RemoveListener(l apireg.RegistrationListener) {
+func (this *multicastApiRegistry) RemoveEventListener(l apireg.RegistrationListener) {
 	this.apiRegs.RemoveListener(l)
 }
 
@@ -213,7 +211,7 @@ func (this *multicastApiRegistry) updateForApi(a apireg.Api) {
 	apisForName := this.apiRegs.GetAllRegsForName(a.Name())
 
 	if len(apisForName) == 0 {
-		reg, _ := store.NewApiRegistration(a, time.Now(), registrationLifeSpan)
+		reg, _ := newApiRegistration(a, time.Now(), registrationLifeSpan)
 		this.apiRegs.AddReg(reg)
 	} else if len(apisForName) > 0 {
 		matched := false
@@ -225,7 +223,7 @@ func (this *multicastApiRegistry) updateForApi(a apireg.Api) {
 		}
 
 		if !matched {
-			reg, _ := store.NewApiRegistration(a, time.Now(), registrationLifeSpan)
+			reg, _ := newApiRegistration(a, time.Now(), registrationLifeSpan)
 			this.apiRegs.AddReg(reg)
 		}
 	}
