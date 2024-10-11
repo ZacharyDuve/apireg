@@ -1,29 +1,21 @@
-package store
+package multicast
 
 import (
 	"errors"
 	"sync"
 	"time"
 
-	"github.com/ZacharyDuve/apireg/api"
+	"github.com/ZacharyDuve/apireg"
 )
 
-type ApiRegistration interface {
-	Api() api.Api
-	TimeRegistered() time.Time
-	UpdateTimeRegistered(time.Time)
-	LifeSpan() time.Duration
-	Expired(time.Time) bool
-}
-
 type apiRegistration struct {
-	api                 api.Api
+	api                 apireg.Api
 	timeRegistered      time.Time
 	timeRegisteredMutex sync.Mutex
 	lifeSpan            time.Duration
 }
 
-func NewApiRegistration(api api.Api, timeReged time.Time, lifeSpan time.Duration) (ApiRegistration, error) {
+func newApiRegistration(api apireg.Api, timeReged time.Time, lifeSpan time.Duration) (*apiRegistration, error) {
 	if api == nil {
 		return nil, errors.New("api is required for NewApiRegistration")
 	}
@@ -31,7 +23,7 @@ func NewApiRegistration(api api.Api, timeReged time.Time, lifeSpan time.Duration
 	return &apiRegistration{api: api, timeRegistered: timeReged, lifeSpan: lifeSpan}, nil
 }
 
-func (this *apiRegistration) Api() api.Api {
+func (this *apiRegistration) Api() apireg.Api {
 	return this.api
 }
 func (this *apiRegistration) TimeRegistered() time.Time {

@@ -1,6 +1,4 @@
-package apievent
-
-import "github.com/ZacharyDuve/apireg/api"
+package apireg
 
 type EventType string
 
@@ -11,23 +9,23 @@ const (
 
 type RegistrationEvent interface {
 	Type() EventType
-	Api() api.Api
+	Api() Api
 }
 
 type eventImpl struct {
 	eType EventType
-	api   api.Api
+	api   Api
 }
 
 func (this *eventImpl) Type() EventType {
 	return this.eType
 }
 
-func (this *eventImpl) Api() api.Api {
+func (this *eventImpl) Api() Api {
 	return this.api
 }
 
-func NewAddEvent(a api.Api) RegistrationEvent {
+func NewAddEvent(a Api) RegistrationEvent {
 	if a != nil {
 		e := &eventImpl{}
 		e.eType = Added
@@ -37,7 +35,7 @@ func NewAddEvent(a api.Api) RegistrationEvent {
 	return nil
 }
 
-func NewRemovedEvent(a api.Api) RegistrationEvent {
+func NewRemovedEvent(a Api) RegistrationEvent {
 	if a != nil {
 		e := &eventImpl{}
 		e.eType = Removed

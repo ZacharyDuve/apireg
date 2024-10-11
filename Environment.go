@@ -1,4 +1,4 @@
-package environment
+package apireg
 
 type Environment string
 

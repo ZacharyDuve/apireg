@@ -1,38 +1,36 @@
-package apireg
+package multicast
 
 import (
 	"log"
 	"testing"
 	"time"
 
-	"github.com/ZacharyDuve/apireg/api"
-	"github.com/ZacharyDuve/apireg/environment"
+	"github.com/ZacharyDuve/apireg"
 	"github.com/google/uuid"
 )
 
 func TestMainForMulticastRegistry(t *testing.T) {
 	log.Println("Hello")
-	r, err := NewMulticastRegistry(nil, environment.All, uuid.New())
+	r, err := NewMulticastRegistry(nil, apireg.All, uuid.New())
 
 	failOnErr(err, t)
-
-	err = r.RegisterApi("Something something", &api.Version{Major: 0, Minor: 1, BugFix: 3}, 80)
+	err = r.RegisterApi("Something something", apireg.NewVersion(0, 1, 3), 80)
 	failOnErr(err, t)
-	err = r.RegisterApi("Somethingelse", &api.Version{Major: 0, Minor: 1, BugFix: 3}, 433)
+	err = r.RegisterApi("Somethingelse", apireg.NewVersion(0, 1, 3), 433)
 	failOnErr(err, t)
 }
 
 func TestThatTwoRegistriesRegisterEachOther(t *testing.T) {
-	reg0, err := NewMulticastRegistry(nil, environment.All, uuid.New())
+	reg0, err := NewMulticastRegistry(nil, apireg.All, uuid.New())
 	failOnErr(err, t)
 
-	reg1, err := NewMulticastRegistry(nil, environment.All, uuid.New())
+	reg1, err := NewMulticastRegistry(nil, apireg.All, uuid.New())
 	failOnErr(err, t)
 	reg0ApiName := "Something"
-	reg0ApiVersion := &api.Version{Major: 0, Minor: 1, BugFix: 3}
+	reg0ApiVersion := apireg.NewVersion(0, 1, 3)
 
 	reg1ApiName := "Other"
-	reg1ApiVersion := &api.Version{Major: 0, Minor: 1, BugFix: 3}
+	reg1ApiVersion := apireg.NewVersion(0, 1, 3)
 
 	reg0.RegisterApi(reg0ApiName, reg0ApiVersion, 8080)
 	reg1.RegisterApi(reg1ApiName, reg1ApiVersion, 8080)

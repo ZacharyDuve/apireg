@@ -1,14 +1,9 @@
 package apireg
 
-import (
-	"github.com/ZacharyDuve/apireg/api"
-	"github.com/ZacharyDuve/apireg/apievent"
-)
-
 type ApiRegistry interface {
-	RegisterApi(name string, version *api.Version, port int) error
-	GetAvailableApis() []api.Api
-	GetApisByApiName(name string) []api.Api
-	AddListener(apievent.RegistrationListener)
-	RemoveListener(apievent.RegistrationListener)
+	RegisterApi(name string, version Version, port int) error
+	GetAvailableApis() []Api
+	GetApisByApiName(name string) []Api
+	AddEventListener(RegistrationListener)
+	RemoveEventListener(RegistrationListener)
 }
