@@ -72,7 +72,7 @@ func (this *multicastApiRegistry) RegisterApi(name string, version apireg.Versio
 		return errors.New("name was empty and name is a required parameter")
 	}
 	//We just set a bogus ip as listeners don't get this ip but from the actual packet
-	localApi, err := apireg.NewApi(name, version, this.environment, net.ParseIP("0.0.0.0"), port)
+	localApi, err := apireg.NewApi(name, version, this.id, this.environment, net.ParseIP("0.0.0.0"), port)
 
 	if err != nil {
 		return err
@@ -181,7 +181,7 @@ func (this *multicastApiRegistry) listenMutlicast() {
 				}
 				var a apireg.Api
 				apiVersion := apireg.NewVersion(message.ApiVersion.Major, message.ApiVersion.Minor, message.ApiVersion.BugFix)
-				a, err = apireg.NewApi(message.ApiName, apiVersion, message.Environment, rAddr.IP, message.ApiPort)
+				a, err = apireg.NewApi(message.ApiName, apiVersion, this.id, message.Environment, rAddr.IP, message.ApiPort)
 				if err != nil {
 					log.Println("Error generating new Api from message")
 				} else {

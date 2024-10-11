@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ZacharyDuve/apireg"
+	"github.com/google/uuid"
 )
 
 func TestThatNewApiRegistrationReturnsErrorIfApiIsNil(t *testing.T) {
@@ -61,6 +62,6 @@ func TestThatRegistrationIsNotExpiredIfTimePassedInMoreThanRegTimePlusLife(t *te
 }
 
 func getValidApi() apireg.Api {
-	api, _ := apireg.NewApi("someApi", apireg.NewVersion(0, 0, 0), apireg.All, net.IPv4(192, 168, 0, 3), 8080)
+	api, _ := apireg.NewApi("someApi", apireg.NewVersion(0, 0, 0), uuid.New(), apireg.All, net.IPv4(192, 168, 0, 3), 8080)
 	return api
 }
